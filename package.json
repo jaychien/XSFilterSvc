@@ -1,0 +1,14 @@
+{
+  "name": "XSFilterSvc",
+  "version": "0.0.1",
+  "description": "XS選股監控後台",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "derektu",
+  "license": "ISC"
+}
