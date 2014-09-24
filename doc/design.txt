@@ -6,8 +6,10 @@
 監控選股的資料轉檔狀態
 ---------------------
 
-- 流程
-    - 寫一支背景程式, 定時去抓取資料的最新時間
+- DataFetcherService
+    - 可以有好幾個instance (分別monitor不同的server)
+    - 啟動時在背景定時執行 (holiday information, schedule)
+    - 讀取以下資料
         - 2330的日線資料 (Close)
         - 2330的外資資料
         - 2330的投信資料
@@ -16,16 +18,53 @@
         - 2330的月營收資料
         - 2330的季報資料
 
-    - 把抓取資料的紀錄寫入DB
+    - 通知DataMonitor資料已經更新
 
-- Web UI
-    - 啟動時讀取最新的狀態
-    - 當server更新時主動push給client
-    - 檢查資料是否有delay的情形 (檢查的邏輯寫在UI端, DB只存記錄)
+- DataMonitorService
+    - 把DataFetcherService所通知的資料寫到DB內
+    - maintain最新的狀態 (最新的DB資料 + DataAlertService所判斷的狀態)
+    - notify
+
+- DataAlertService
+    - 提供資料狀態的判斷API (每一種資料加上 'OK','DELAY','MAYBE'的flag)
+
+- WebServer
+    - 提供 socket-io的介面
+        - client連上來後回傳最新的狀態
+        - 當有更新時push給client
+
+    - 提供 json query API
+
+    - 提供 raw data query API (for Excel等其他用途使用)
 
 - Requirement
     - 提供一支API, 取得XSDB內的資料
         - 傳入商品, 頻率, 欄位(list), 筆數
         - 回傳資料 (including N/A, -99999）
 
+    - How to
+        http://sd-xsservice01:8083/SymbolData.html
+
+        Post data =
+            <?xml version='1.0' encoding='utf-8' ?>
+                  <Symbol ID='2330.TW' Freq='8' Fields='收盤價;成交量'/>
+
+        Return
+        <?xml version="1.0" encoding="utf-8"?>
+        <Ret status="0">
+            <Symbol ID="2330.TW" Freq="8">
+                <Fields><![CDATA[收盤價;成交量;日期;開盤價;收盤價;最低價;最高價;成交量]]></Fields>
+                <Result />
+                <val value="71.1;35747;20110103;71.5;71.1;70.8;71.6;35747" />
+                <val value="71.2;36048;20110104;71;71.2;70.8;71.6;36048" />
+                <val value="69.8;54327;20110105;70.9;69.8;69.6;71.1;54327" />
+                <val value="71;46802;20110106;69.8;71;69.7;71;46802" />
+                <val value="72.5;170329;20110107;71.9;72.5;71.9;73;170329" />
+                <val value="74.2;69704;20110110;73;74.2;72.6;74.2;69704" />
+                <val value="74.5;82759;20110111;74.1;74.5;73.8;74.9;82759" />
+           </Symbol>
+        </Ret>
+
+        - 要parse Fields, 比對出query的欄位在val內的位置
+        - 特殊值: -99999, N/A
 
