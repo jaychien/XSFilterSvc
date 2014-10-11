@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html ng-app="QueryApp">
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>XSFilterSvc - 商品資料查詢</title>
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
+
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="bower_components/angular-sanitize/angular-sanitize.min.js"></script>
+    <script src="bower_components/underscore/underscore-min.js"></script>
+
+    <!-- angular-bootstrap -->
+    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js"></script>
+
+    <!-- for taginput -->
+    <script type="text/javascript" src="bower_components/ng-tags-input/ng-tags-input.min.js"></script>
+    <link rel="stylesheet" href="bower_components/ng-tags-input/ng-tags-input.css">
+    <link rel="stylesheet" href="bower_components/ng-tags-input/ng-tags-input.bootstrap.css">
+
+    <!-- for spinner -->
+    <script src="bower_components/spin.js/spin.js"></script>
+    <script src="bower_components/angular-spinner/angular-spinner.min.js"></script>
+
+    <script>
+        var app = angular.module('QueryApp', ['angularSpinner', 'ngTagsInput', 'ngSanitize', 'ui.bootstrap']);
+
+        // FreqSvc
+        //
+        app.service('FreqSvc', function() {
+            this.freqs = [
+                { freq: 8, name:"日" },
+                { freq: 9, name:"周" },
+                { freq: 10, name:"月" },
+                { freq: 11, name:"還原日" },
+                { freq: 12, name:"還原周" },
+                { freq: 13, name:"還原月" },
+                { freq: 14, name:"季" },
+                { freq: 15, name:"半年" },
+                { freq: 16, name:"年" },
+                { freq: 999, name:"單一" }
+            ];
+
+            this.getFreq = function(freq) {
+                var i;
+                for (i = 0; i < this.freqs.length; i++) {
+                    if (this.freqs[i].freq == freq)
+                        return this.freqs[i];
+                }
+                return null;
+            };
+
+            this.getName = function(freq) {
+                var freqItem = this.getFreq(freq);
+                if (freqItem != null)
+                    return freqItem.name;
+                else
+                    return "(未知)";
+            };
+        });
+
+        // FieldSvc
+        //
+        app.service('FieldSvc', function(FreqSvc) {
+            // initialize from the return data of '/api/getfield'
+            //
+            this.fieldMap = {};
+            this.initData = function(fields) {
+                var map = {};
+                /*
+                    [ { Id: 3, Field: "日期", Aliases: [ "Date" ], Freqs: [ 8, 9, 10, 14, 16 ] } .. ]
+
+                    for each of the freq, 產生
+                    - { id:.., field:.., name:'Field(頻率)', aliases:[..], freq:..}
+                */
+                _.each(fields, function(field) {
+                    _.each(field.Freqs, function(freq) {
+                        var freqFields = map[freq];
+                        if (!freqFields) {
+                            freqFields = [];
+                            map[freq] = freqFields;
+                        }
+                        freqFields.push({id:field.Id, field:field.Field, name:addFreqName(field.Field, freq), aliases:field.Aliases, freq:freq});
+                    });
+                });
+                this.fieldMap = map;
+            };
+
+            // Return list of field with the given 'freq' that match 'query' string
+            //
+            this.queryFreqFields = function(query, freq) {
+                query = query.toLowerCase();
+                var fields = this.fieldMap[freq] || [];
+                var filtered = [];
+                _.each(fields, function(field) {
+                    // search for 'field', and all of the aliases
+                    //
+                    if (!query) {
+                        filtered.push(field);
+                    }
+                    else if (field.field.toLowerCase().indexOf(query) >= 0) {
+                        filtered.push(field);
+                    }
+                    else if (field.aliases) {
+                        if (_.find(field.aliases, function(alias) { return alias.toLowerCase().indexOf(query) >= 0;})) {
+                            filtered.push(field);
+                        }
+                    }
+                });
+                return filtered;
+            };
+
+            function addFreqName(name, freq) {
+                return name + "(" + FreqSvc.getName(freq) + ")";
+            }
+        });
+
+        app.controller('QueryCtrl', function($scope, $http, $q, usSpinnerService, FreqSvc, FieldSvc) {
+            $scope.data = {};
+            $scope.data.selectedFields = [];
+            $scope.data.error = null;
+            $scope.data.freqSvc = FreqSvc;
+            $scope.data.freq = $scope.data.freqSvc.getFreq(8);
+            $scope.data.fieldSvc = FieldSvc;
+            $scope.data.selectedSymbol = null;
+
+            $scope.refresh = function() {
+                var url = '/api/getfield';
+                $http.get(url)
+                    .success(function(fields) {
+                        $scope.data.fieldSvc.initData(fields);
+                        $scope.data.error = null;
+                    })
+                    .error(function(error) {
+                        $scope.error = error;
+                    });
+            };
+
+            $scope.changeFreq = function() {
+                // reset selected fields
+                //
+                $scope.data.selectedFields = [];
+
+                var fields = $scope.data.fieldSvc.queryFreqFields('', $scope.data.freq.freq);
+                _.each(fields, function(field) {
+                    console.log(field);
+                });
+            };
+
+            $scope.queryFreqFields = function(query) {
+                var deferred = $q.defer();
+                deferred.resolve($scope.data.fieldSvc.queryFreqFields(query, $scope.data.freq.freq));
+                return deferred.promise;
+            };
+
+            $scope.getSelectedFieldsName = function() {
+                return _.reduce($scope.data.selectedFields, function(memo, field) {
+                    if (memo) memo = memo + ';';
+                    return memo + field.field;
+                }, '');
+            };
+
+            $scope.queryStock = function(query) {
+                return $http.get('/api/querystock?count=20&query=' + query)
+                        .then(function(result) {
+                            return result.data;
+                        });
+            };
+
+            $scope.formatSymbol = function(symbol) {
+                if (!symbol)
+                    return '';
+                else
+                    return symbol.Name + " (" + symbol.Id + ")";
+            };
+
+            $scope.refresh();
+        });
+    </script>
+    <script type="text/ng-template" id="stockTemplate.html">
+      <a>
+        <span>{{match.model.Name}} ({{match.model.Id}})</span>
+      </a>
+    </script>
+</head>
+<body ng-controller="QueryCtrl">
+    <div class="container">
+        <div class="page-header">
+            <h3>商品資料查詢</h3>
+        </div>
+        <form class="form-inline">
+            <div class="form-group">
+                <select ng-model="data.freq" class="form-control" ng-options="c.name for c in data.freqSvc.freqs" ng-change="changeFreq()"></select>
+            </div>
+
+            <div class="form-group">
+                <input type="text" class="form-control" placeholder="輸入商品名稱"
+                    ng-model="data.selectedSymbol"
+                    typeahead="symbol for symbol in queryStock($viewValue)"
+                    typeahead-input-formatter="formatSymbol($model)"
+                    typeahead-wait-ms="200"
+                    typeahead-template-url="stockTemplate.html">
+            </div>
+
+            <div class="form-group">
+                <tags-input style="width: 500px;" ng-model="data.selectedFields" display-property="name" placeholder="請輸入欄位名稱">
+                    <auto-complete source="queryFreqFields($query)" min-length="1"></auto-complete>
+                </tags-input>
+            </div>
+            <div class="form-group">
+                <button type="button" class="btn btn-primary">開始查詢 <span class="glyphicon glyphicon-search"></span></button>
+            </div>
+        </form>
+        <div>
+            <span class="text-info">頻率:{{data.freq.freq}} 商品:{{data.selectedSymbol.Id}} 欄位:{{getSelectedFieldsName()}}</span>
+        </div>
+    </div>
+</body>
+</html>

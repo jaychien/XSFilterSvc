@@ -68,3 +68,51 @@
         - 要parse Fields, 比對出query的欄位在val內的位置
         - 特殊值: -99999, N/A
 
+- 欄位資料處理
+
+    /js/Fields.js
+
+    [
+        {
+            Names: [
+                "Volume",
+                "成交量"
+            ],
+            Id: 9,
+            Categ: [
+                1,
+                2
+            ],
+            Desc: "每個時段區間的交易量累計加總",
+            ScriptTypes: [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+            ],
+            Freqs: [
+                8,
+                9,
+                10,
+                14,
+                16
+            ]
+        },
+    ]
+
+    - 找 "Freqs" 不是null的
+    - 組成
+        [ { Id: n, Field: 中文name, Alias:[..], Freqs:[freq1, freq2] }, .. ]
+
+
+    - client端收到後, 依照freq, 分成N個tables, indexed by freq
+        fieldsMap[freq] =
+            [ { Id: n, Name:name, Field:中文名字}, { Id: n, Name: name, Field: 中文名字 }, .. ]
+
+            // 搜尋時可以用中文名字 or alias, 找到欄位時要的是中文名字
+
+
+
+

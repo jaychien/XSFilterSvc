@@ -12,6 +12,7 @@
   "author": "derektu",
   "license": "ISC",
   "dependencies": {
+    "bluebird": "^2.3.5",
     "date-utils": "^1.2.16",
     "express": "^4.9.4",
     "log4js": "^0.6.21",
@@ -19,6 +20,7 @@
     "request": "^2.44.0",
     "sprintf-js": "0.0.7",
     "underscore": "^1.7.0",
+    "underscore.string": "^2.3.3",
     "xmldom": "^0.1.19",
     "zlib": "^1.0.5"
   }
