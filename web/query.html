@@ -123,7 +123,10 @@
             $scope.data.freqSvc = FreqSvc;
             $scope.data.freq = $scope.data.freqSvc.getFreq(8);
             $scope.data.fieldSvc = FieldSvc;
-            $scope.data.selectedSymbol = null;
+            $scope.data.selectedSymbolId = null;
+            $scope.data.count = 50;
+            $scope.data.formerror = '';
+            $scope.data.queryResult = {};
 
             $scope.refresh = function() {
                 var url = '/api/getfield';
@@ -175,6 +178,28 @@
                     return symbol.Name + " (" + symbol.Id + ")";
             };
 
+            $scope.execQuery = function() {
+                if ($scope.data.selectedFields.length == 0)
+                    return;
+
+                /*
+                    /api/getdata?symbol=2330.TW&freq=..&fields=..&count=..
+                 */
+
+                var url = '/api/getdata?symbol=' + $scope.data.selectedSymbolId + '&freq=' + $scope.data.freq.freq + '&fields=' + $scope.getSelectedFieldsName() + '&count=' + $scope.data.count;
+
+                $http.get(url)
+                    .success(function(result) {
+                        $scope.data.queryResult.title = result[0];
+                        $scope.data.queryResult.rows = result.slice(1);
+
+                        $scope.data.error = null;
+                    })
+                    .error(function(error) {
+                        $scope.error = error;
+                    });
+            };
+
             $scope.refresh();
         });
     </script>
@@ -189,32 +214,55 @@
         <div class="page-header">
             <h3>商品資料查詢</h3>
         </div>
-        <form class="form-inline">
+
+        <form name="queryForm" class="form-inline" style="padding-bottom: 10px;" novalidate>
             <div class="form-group">
                 <select ng-model="data.freq" class="form-control" ng-options="c.name for c in data.freqSvc.freqs" ng-change="changeFreq()"></select>
             </div>
 
             <div class="form-group">
-                <input type="text" class="form-control" placeholder="輸入商品名稱"
-                    ng-model="data.selectedSymbol"
-                    typeahead="symbol for symbol in queryStock($viewValue)"
-                    typeahead-input-formatter="formatSymbol($model)"
+                <input type="text" class="form-control" placeholder="輸入商品名稱" required
+                    style="width:150px;"
+                    ng-model="data.selectedSymbolId"
+                    typeahead="symbol.Id for symbol in queryStock($viewValue)"
                     typeahead-wait-ms="200"
                     typeahead-template-url="stockTemplate.html">
             </div>
 
             <div class="form-group">
-                <tags-input style="width: 500px;" ng-model="data.selectedFields" display-property="name" placeholder="請輸入欄位名稱">
+                <tags-input style="width: 500px;" ng-model="data.selectedFields" display-property="name" placeholder="請輸入欄位名稱" required>
                     <auto-complete source="queryFreqFields($query)" min-length="1"></auto-complete>
                 </tags-input>
             </div>
+
             <div class="form-group">
-                <button type="button" class="btn btn-primary">開始查詢 <span class="glyphicon glyphicon-search"></span></button>
+                <input type="text" class="form-control" ng-model="data.count" style="width:50px;" required ng-pattern="/^\d+$/"/>
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="btn btn-primary" ng-disabled="queryForm.$invalid" ng-click="execQuery()">開始查詢 <span class="glyphicon glyphicon-search"></span></button>
             </div>
         </form>
-        <div>
-            <span class="text-info">頻率:{{data.freq.freq}} 商品:{{data.selectedSymbol.Id}} 欄位:{{getSelectedFieldsName()}}</span>
+
+        <div class="alert alert-danger" ng-show="data.error">
+            ({{data.error}})
         </div>
+
+        <div style="padding-top: 10px">
+            <table class="table table-striped table-bordered table-hover table-condensed" ng-hide="data.error">
+                <thead>
+                    <tr>
+                        <td ng-repeat="fieldName in data.queryResult.title" class="text-center small">{{fieldName}}</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="row in data.queryResult.rows">
+                        <td ng-repeat="field in row" class="text-center small">{{field}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
     </div>
 </body>
 </html>
