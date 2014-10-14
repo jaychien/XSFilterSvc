@@ -63,7 +63,7 @@
         // FieldSvc
         //
         app.service('FieldSvc', function(FreqSvc) {
-            // initialize from the return data of '/api/getfield'
+            // initialize from the return data of 'api/getfield'
             //
             this.fieldMap = {};
             this.initData = function(fields) {
@@ -129,7 +129,7 @@
             $scope.data.queryResult = {};
 
             $scope.refresh = function() {
-                var url = '/api/getfield';
+                var url = 'api/getfield';
                 $http.get(url)
                     .success(function(fields) {
                         $scope.data.fieldSvc.initData(fields);
@@ -165,7 +165,7 @@
             };
 
             $scope.queryStock = function(query) {
-                return $http.get('/api/querystock?count=20&query=' + query)
+                return $http.get('api/querystock?count=20&query=' + query)
                         .then(function(result) {
                             return result.data;
                         });
@@ -183,10 +183,10 @@
                     return;
 
                 /*
-                    /api/getdata?symbol=2330.TW&freq=..&fields=..&count=..
+                    api/getdata?symbol=2330.TW&freq=..&fields=..&count=..
                  */
 
-                var url = '/api/getdata?symbol=' + $scope.data.selectedSymbolId + '&freq=' + $scope.data.freq.freq + '&fields=' + $scope.getSelectedFieldsName() + '&count=' + $scope.data.count;
+                var url = 'api/getdata?symbol=' + $scope.data.selectedSymbolId + '&freq=' + $scope.data.freq.freq + '&fields=' + $scope.getSelectedFieldsName() + '&count=' + $scope.data.count;
 
                 $http.get(url)
                     .success(function(result) {
