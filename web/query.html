@@ -256,8 +256,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr ng-repeat="row in data.queryResult.rows">
-                        <td ng-repeat="field in row" class="text-center small">{{field}}</td>
+                    <tr ng-repeat="row in data.queryResult.rows track by $index">
+                        <td ng-repeat="field in row track by $index" class="text-center small">{{field}}</td>
                     </tr>
                 </tbody>
             </table>
