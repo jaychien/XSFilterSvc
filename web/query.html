@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
 
     <script src="bower_components/angular/angular.min.js"></script>
+    <script src="bower_components/angular-route/angular-route.min.js"></script>
     <script src="bower_components/angular-sanitize/angular-sanitize.min.js"></script>
     <script src="bower_components/underscore/underscore-min.js"></script>
 
@@ -24,7 +25,11 @@
     <script src="bower_components/angular-spinner/angular-spinner.min.js"></script>
 
     <script>
-        var app = angular.module('QueryApp', ['angularSpinner', 'ngTagsInput', 'ngSanitize', 'ui.bootstrap']);
+        var app = angular.module('QueryApp', ['angularSpinner', 'ngTagsInput', 'ngSanitize', 'ui.bootstrap', 'ngRoute']);
+
+        app.config(function ($routeProvider, $locationProvider) {
+            $locationProvider.html5Mode(true);
+        });
 
         // FreqSvc
         //
@@ -116,7 +121,7 @@
             }
         });
 
-        app.controller('QueryCtrl', function($scope, $http, $q, usSpinnerService, FreqSvc, FieldSvc) {
+        app.controller('QueryCtrl', function($scope, $http, $q, $location, usSpinnerService, FreqSvc, FieldSvc) {
             $scope.data = {};
             $scope.data.selectedFields = [];
             $scope.data.error = null;
@@ -127,9 +132,12 @@
             $scope.data.count = 50;
             $scope.data.formerror = '';
             $scope.data.queryResult = {};
+            $scope.data.xsserver = $location.search()['server'] || 'http://j-hpc03';
+
+            console.log('xsserver=' + $scope.data.xsserver);
 
             $scope.refresh = function() {
-                var url = 'api/getfield';
+                var url = 'api/getfield?server=' + $scope.data.xsserver;
                 $http.get(url)
                     .success(function(fields) {
                         $scope.data.fieldSvc.initData(fields);
@@ -186,7 +194,7 @@
                     api/getdata?symbol=2330.TW&freq=..&fields=..&count=..
                  */
 
-                var url = 'api/getdata?symbol=' + $scope.data.selectedSymbolId + '&freq=' + $scope.data.freq.freq + '&fields=' + $scope.getSelectedFieldsName() + '&count=' + $scope.data.count;
+                var url = 'api/getdata?server=' + $scope.data.xsserver + '&symbol=' + $scope.data.selectedSymbolId + '&freq=' + $scope.data.freq.freq + '&fields=' + $scope.getSelectedFieldsName() + '&count=' + $scope.data.count;
 
                 $http.get(url)
                     .success(function(result) {
@@ -244,11 +252,11 @@
             </div>
         </form>
 
-        <div class="alert alert-danger" ng-show="data.error">
+        <div class="alert alert-danger" ng-show="data.error" ng-cloak>
             ({{data.error}})
         </div>
 
-        <div style="padding-top: 10px">
+        <div style="padding-top: 10px" ng-cloak>
             <table class="table table-striped table-bordered table-hover table-condensed" ng-hide="data.error">
                 <thead>
                     <tr>
